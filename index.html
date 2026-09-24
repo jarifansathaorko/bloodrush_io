@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BloodRush.io — Mosquito Survival Arena</title>
+  <meta name="description" content="BloodRush.io — Hunt, grow, and survive in a chaotic mosquito battle arena. Eat smaller enemies, dodge bigger ones, and claw your way to #1!">
+  <meta name="theme-color" content="#E8450A">
+  <meta property="og:title" content="BloodRush.io">
+  <meta property="og:description" content="Mosquito survival arena — eat or be eaten!">
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/ui.css">
+</head>
+<body>
+
+<!-- ══ GAME CANVAS ══════════════════════════════════════════ -->
+<canvas id="game-canvas"></canvas>
+
+<!-- ══ UI ROOT ══════════════════════════════════════════════ -->
+<div id="ui-root">
+
+  <!-- ─── MAIN MENU ─────────────────────────────────────── -->
+  <div id="screen-main-menu" class="screen">
+
+    <!-- Ambient background particles (CSS-driven) -->
+    <div class="mm-bg-particles">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+
+    <!-- ── TOP BAR ── -->
+    <div class="mm-top-bar animate-in">
+      <div class="mm-top-left">
+        <!-- intentionally empty: level/coins removed -->
+      </div>
+      <div class="mm-top-right">
+        <button id="btn-help"     class="mm-icon-btn" aria-label="How to Play">❓</button>
+        <button id="btn-trophy"   class="mm-icon-btn" aria-label="Leaderboard">🏆</button>
+        <button id="btn-settings" class="mm-icon-btn" aria-label="Settings">⚙️</button>
+      </div>
+    </div>
+
+    <!-- ── MAIN 3-COLUMN LAYOUT ── -->
+    <div class="mm-layout animate-in">
+
+      <!-- LEFT: Top Scorers + Daily Reward -->
+      <div class="mm-left-col">
+        <div class="mm-panel">
+          <h3 class="mm-panel-title"><span class="mm-panel-dot" style="background:#FFD700;"></span>TOP SCORERS</h3>
+          <div class="mm-lb-list">
+            <div class="mm-lb-row" id="mm-lb-row-1">
+              <span class="mm-lb-medal">🥇</span>
+              <span class="mm-lb-name" style="opacity:0.35">—</span>
+              <span class="mm-lb-score" style="opacity:0.35">—</span>
+            </div>
+            <div class="mm-lb-row" id="mm-lb-row-2">
+              <span class="mm-lb-medal">🥈</span>
+              <span class="mm-lb-name" style="opacity:0.35">—</span>
+              <span class="mm-lb-score" style="opacity:0.35">—</span>
+            </div>
+            <div class="mm-lb-row" id="mm-lb-row-3">
+              <span class="mm-lb-medal">🥉</span>
+              <span class="mm-lb-name" style="opacity:0.35">—</span>
+              <span class="mm-lb-score" style="opacity:0.35">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mm-panel mm-reward-panel">
+          <h3 class="mm-panel-title"><span class="mm-panel-dot" style="background:#FFD740;"></span>DAILY REWARD</h3>
+          <div class="mm-chest-visual">🎁</div>
+          <div class="mm-reward-timer-container">
+            <div class="mm-reward-timer-icon">🕒</div>
+            <div class="mm-reward-timer" id="mm-reward-time">00:00:00</div>
+            <div class="mm-reward-label">NEXT REWARD IN</div>
+          </div>
+          <button id="btn-claim-reward" class="mm-claim-btn" style="display:none;">✨ CLAIM REWARD</button>
+        </div>
+      </div>
+
+      <!-- CENTER: Hero entity + logo + play -->
+      <div class="mm-center-col">
+        <div class="mm-logo-wrap">
+          <h1 class="mm-game-title">BLOOD<span class="mm-rush">RUSH</span><span class="mm-io">.IO</span></h1>
+          <p class="mm-subtitle">— EAT OR BE EATEN —</p>
+        </div>
+
+        <div class="mm-hero-wrap">
+          <div class="mm-hero-ring"></div>
+          <canvas id="hero-canvas" width="320" height="280"></canvas>
+          <div class="mm-hero-shadow"></div>
+        </div>
+
+        <div class="mm-name-row">
+          <span class="mm-nick-icon">👤</span>
+          <input type="text" id="input-player-name" class="mm-name-input" placeholder="NICKNAME..." maxlength="15" autocomplete="off">
+        </div>
+
+        <button id="btn-play" class="mm-play-btn">
+          <span class="mm-play-chevron">▶</span> PLAY NOW
+        </button>
+
+        <!-- Ad boost strip -->
+        <button class="mm-ad-boost-btn" id="btn-ad-boost">
+          📺 Watch Ad for <strong>2× Start Size</strong>
+        </button>
+      </div>
+
+      <!-- RIGHT: Shop + Social -->
+      <div class="mm-right-col">
+        <div class="mm-panel mm-actions-panel">
+          <h3 class="mm-panel-title"><span class="mm-panel-dot" style="background:#00E5FF;"></span>ACTIONS</h3>
+          <button id="btn-collection" class="mm-big-action shop">
+            <span class="mba-icon">🛒</span>
+            <span class="mba-label">BLACK MARKET</span>
+            <span class="mba-arrow">›</span>
+          </button>
+          <button id="btn-invite" class="mm-big-action invite">
+            <span class="mba-icon">👥</span>
+            <span class="mba-label">INVITE FRIENDS</span>
+            <span class="mba-arrow">›</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <div class="mm-footer animate-in">
+      <span>v1.5.1b</span>
+      <span class="mm-dot">•</span>
+      <button class="mm-footer-link" id="btn-about">About</button>
+      <span class="mm-dot">•</span>
+      <button class="mm-footer-link" id="btn-privacy">Privacy</button>
+      <span class="mm-dot">•</span>
+      <button class="mm-footer-link" id="btn-terms">Terms</button>
+    </div>
+
+  </div>
+
+  <!-- ─── GENERIC MODALS ─────────────────────────────────────── -->
+  
+  <!-- Settings Popup Modal -->
+  <div id="modal-settings" class="modal-overlay" style="display:none;">
+    <div class="modal-glass animate-in">
+      <div class="modal-header">
+        <h2 class="modal-title">⚙️ Settings</h2>
+        <button class="btn-close-modal modal-close-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="popup-slider-row">
+          <div class="popup-slider-header">
+            <span class="popup-slider-label">🎵 Music Volume</span>
+            <span class="popup-slider-val" id="popup-label-music">50%</span>
+          </div>
+          <input type="range" id="popup-slider-music" class="settings-slider popup-slider" min="0" max="100" value="50">
+        </div>
+        <div class="popup-slider-row">
+          <div class="popup-slider-header">
+            <span class="popup-slider-label">🔊 SFX Volume</span>
+            <span class="popup-slider-val" id="popup-label-sfx">70%</span>
+          </div>
+          <input type="range" id="popup-slider-sfx" class="settings-slider popup-slider" min="0" max="100" value="70">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-close-modal" style="width:100%; margin-top:0.5rem;">SAVE & CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Leaderboard Modal -->
+  <div id="modal-leaderboard" class="modal-overlay" style="display:none;">
+    <div class="modal-glass animate-in" style="max-width:420px;">
+      <div class="modal-header">
+        <h2 class="modal-title">🏆 Leaderboard</h2>
+        <button class="btn-close-modal modal-close-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-lb-list" class="modal-lb-list">
+          <div class="modal-lb-empty">No scores yet — play your first match!</div>
+        </div>
+        <div class="modal-lb-stats">
+          <div class="modal-lb-stat-row">
+            <span>Best Score</span><span id="modal-lb-best">0</span>
+          </div>
+          <div class="modal-lb-stat-row">
+            <span>Total Matches</span><span id="modal-lb-matches">0</span>
+          </div>
+          <div class="modal-lb-stat-row">
+            <span>Total Kills</span><span id="modal-lb-kills">0</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-close-modal" style="width:100%;">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Simple Info Modal -->
+  <div id="modal-info" class="screen" style="display:none; z-index: 100;">
+    <div class="panel animate-in" style="max-width: 400px; padding: 2rem;">
+      <h2 id="modal-info-title" style="margin-bottom: 1rem;">Title</h2>
+      <p id="modal-info-content" style="color: #ccc; line-height: 1.6; margin-bottom: 1.5rem; font-size: 0.9rem;">Content</p>
+      <button class="btn btn-secondary btn-close-modal" style="width: 100%;">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- ─── USERNAME INPUT MODAL ────────────────────────────── -->
+  <div id="screen-name-input" class="screen">
+    <div class="screen-bg-anim"></div>
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <span style="font-size:3rem; margin-bottom:0.4rem;">🦟</span>
+      <h2>Enter Your Name</h2>
+      <p style="color:var(--color-text-muted); font-size:0.85rem; margin:0.4rem 0 1.2rem;">Choose your hunter name for the battle arena</p>
+      
+      <div style="width:100%; text-align:left;">
+        <label for="input-player-name-modal" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.06em; margin-bottom:4px; display:block;">Hunter Name</label>
+        <input type="text" id="input-player-name-modal" class="name-input" placeholder="e.g. ShadowBuzz" maxlength="15" autocomplete="off" spellcheck="false">
+      </div>
+
+      <button id="btn-submit-name" class="btn btn-primary" style="margin-top:1.2rem; width:100%;">
+        ⚔️ START GAME
+      </button>
+      <button id="btn-name-back" class="btn btn-ghost" style="margin-top:0.6rem; width:100%;">
+        ← Back
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── MODE SELECT ─────────────────────────────────────── -->
+  <div id="screen-mode-select" class="screen">
+    <div class="screen-bg-anim"></div>
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center;">
+      <h2>Select Mode</h2>
+      <div class="mode-grid" style="width:100%; margin:1.2rem 0;">
+        <div class="mode-card" id="btn-mode-survival">
+          <div class="mode-icon">🦟</div>
+          <div class="mode-name">Survival</div>
+          <div class="mode-desc">Hunt, grow, survive 5 minutes</div>
+        </div>
+        <div class="mode-card locked">
+          <div class="mode-icon">⚔️</div>
+          <div class="mode-name">Battle Royale</div>
+          <div class="mode-desc">Coming soon</div>
+        </div>
+      </div>
+      <button id="btn-mode-back" class="btn btn-ghost" style="width:100%">← Back</button>
+    </div>
+  </div>
+
+  <!-- ─── PRE-MATCH ───────────────────────────────────────── -->
+  <div id="screen-pre-match" class="screen">
+    <div class="screen-bg-anim"></div>
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center;">
+      <h2>Ready to Hunt?</h2>
+      <div class="prematch-tip" id="prematch-tip">Eat smaller mosquitoes to grow!</div>
+
+      <div style="width:100%; margin:0.5rem 0 1rem;">
+        <p style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.08em;">Controls</p>
+        <div class="prematch-controls">
+          <div class="control-chip">
+            <span class="control-key">W A S D</span> Move
+          </div>
+          <div class="control-chip">
+            <span class="control-key">SPACE / SHIFT</span> 🚀 Dash & Strike!
+          </div>
+          <div class="control-chip">
+            <span class="control-key">RIGHT CLICK</span> ⚡ Dash
+          </div>
+          <div class="control-chip">
+            <span>👆</span> Touch D-Pad + Dash
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-prematch-go" class="btn btn-primary" style="width:100%;">
+        🦟 Enter Arena!
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── GAMEPLAY HUD ────────────────────────────────────── -->
+  <div id="screen-gameplay" class="screen">
+
+    <!-- Top HUD bar -->
+    <div class="hud-top">
+      <div class="hud-stats">
+        <div class="hud-chip hud-rank-chip">
+          <span class="label">RANK</span>
+          <span id="hud-rank">#1/35</span>
+        </div>
+        <div class="hud-chip hud-size-chip">
+          <span class="label">SIZE</span>
+          <span id="hud-size">14</span>
+        </div>
+      </div>
+
+      <span id="hud-phase" class="hud-phase phase-1">HUNT</span>
+
+      <button id="btn-pause" class="btn btn-icon">⏸</button>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="hud-leaderboard"></div>
+
+    <!-- Active power-up -->
+    <div id="hud-powerup">⚡ 5s</div>
+
+    <!-- Countdown overlay -->
+    <div id="countdown-display" style="display:none;">3</div>
+
+    <!-- Boost / Stamina Bar (Bottom Center) -->
+    <div id="boost-bar-container">
+      <div id="boost-bar-track">
+        <div id="boost-bar-fill" class="boost-fill boost-ready" style="width: 100%;"></div>
+      </div>
+      <div id="boost-bar-label">BOOST READY</div>
+    </div>
+
+    <!-- Virtual joystick (Bottom-Left) -->
+    <div id="joystick-container">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- Touch Dash / Strike Button (Bottom-Right, matching mobile action button in reference image) -->
+    <div id="touch-action-container">
+      <button id="btn-touch-dash" class="touch-action-btn" title="Dash & Strike">
+        <span class="action-icon">🗡️</span>
+        <span class="action-label">DASH</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ─── PAUSE ────────────────────────────────────────────── -->
+  <div id="screen-pause" class="screen">
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <h2 style="margin-bottom:0.25rem">⏸ Paused</h2>
+      <p style="color:var(--color-text-muted); font-size:0.85rem; margin-bottom:1.5rem;">Take a breath!</p>
+      <div class="pause-grid" style="width:100%">
+        <button id="btn-resume"     class="btn btn-primary">▶ Resume</button>
+        <button id="btn-restart"    class="btn btn-secondary">🔄 Restart</button>
+        <button id="btn-pause-menu" class="btn btn-ghost">🏠 Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REVIVE PROMPT ────────────────────────────────────── -->
+  <div id="screen-revive" class="screen">
+    <div class="revive-overlay">
+
+      <!-- Glitch death flash -->
+      <div class="revive-flash-bg"></div>
+
+      <div class="revive-card animate-in">
+        <!-- Skull + title -->
+        <div class="revive-header">
+          <div class="revive-skull">💀</div>
+          <h2 class="revive-title">YOU DIED</h2>
+          <p class="revive-subtitle">Your current run can be saved...</p>
+        </div>
+
+        <!-- Countdown ring -->
+        <div class="revive-timer-wrap">
+          <svg class="revive-ring" viewBox="0 0 120 120">
+            <circle class="revive-ring-bg" cx="60" cy="60" r="52"/>
+            <circle class="revive-ring-fill" id="revive-ring-fill" cx="60" cy="60" r="52"
+              stroke-dasharray="326.7" stroke-dashoffset="0"/>
+          </svg>
+          <div class="revive-ring-label">
+            <span id="revive-countdown">10</span>
+            <span class="revive-ring-sub">SEC</span>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <button id="btn-revive-ad" class="revive-cta-btn">
+          <span class="revive-ad-icon">📺</span>
+          <span>
+            <strong>WATCH AD TO REVIVE</strong>
+            <small>Continue from where you left off</small>
+          </span>
+        </button>
+
+        <div class="revive-divider">OR</div>
+
+        <button id="btn-revive-decline" class="revive-skip-btn">End My Run →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── GAME OVER ────────────────────────────────────────── -->
+  <div id="screen-game-over" class="screen">
+    <div class="go-layout animate-in">
+
+      <!-- Left: Player Result -->
+      <div class="go-left">
+        <div class="go-header">
+          <div class="go-skull">💀</div>
+          <h2 class="go-title">YOU WERE EATEN</h2>
+          <p class="go-subtitle">Better luck next time, <span id="go-player-name">Hunter</span>!</p>
+        </div>
+
+        <!-- Big rank callout -->
+        <div class="go-rank-callout">
+          <div class="go-rank-number" id="go-rank">#5</div>
+          <div class="go-rank-label">FINAL RANK</div>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="go-stats">
+          <div class="go-stat-chip">
+            <span class="go-stat-icon">📐</span>
+            <div>
+              <div class="go-stat-label">MAX SIZE</div>
+              <div class="go-stat-val" id="go-size">42</div>
+            </div>
+          </div>
+          <div class="go-stat-chip">
+            <span class="go-stat-icon">⏱️</span>
+            <div>
+              <div class="go-stat-label">SURVIVED</div>
+              <div class="go-stat-val" id="go-survival">00:00</div>
+            </div>
+          </div>
+          <div class="go-stat-chip">
+            <span class="go-stat-icon">💀</span>
+            <div>
+              <div class="go-stat-label">KILLS</div>
+              <div class="go-stat-val" id="go-kills">3</div>
+            </div>
+          </div>
+          <div class="go-stat-chip">
+            <span class="go-stat-icon">⚡</span>
+            <div>
+              <div class="go-stat-label">SCORE</div>
+              <div class="go-stat-val" id="go-score">820</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rewards earned -->
+        <div class="go-rewards">
+          <div class="go-reward-pill xp">🧬 <span id="go-xp">+120 XP</span></div>
+          <div class="go-reward-pill coin">🪙 <span id="go-coins">+45</span></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="go-actions">
+          <button id="btn-go-replay" class="btn-go-primary">🔄 Play Again</button>
+          <div class="go-secondary-actions">
+            <button id="btn-go-shop" class="btn-go-sec">🛒 Shop</button>
+            <button id="btn-go-menu" class="btn-go-sec">🏠 Menu</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Session Leaderboard -->
+      <div class="go-right">
+        <div class="go-lb-header">
+          <h3 class="go-lb-title">🏆 MATCH RESULTS</h3>
+          <span class="go-lb-subtitle">Top Players This Lobby</span>
+        </div>
+        <div id="go-leaderboard-list" class="go-lb-list">
+          <!-- Populated by JS -->
+          <div class="go-lb-row go-lb-player">
+            <span class="go-lb-pos">?</span>
+            <span class="go-lb-name">You</span>
+            <span class="go-lb-score">—</span>
+          </div>
+        </div>
+        <p class="go-lb-note">Results are simulated based on your session performance.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── VICTORY ──────────────────────────────────────────── -->
+  <div id="screen-victory" class="screen">
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center;">
+      <div class="result-header">
+        <span class="result-emoji">🏆</span>
+        <h2 class="result-title win">VICTORY!</h2>
+        <p style="color:var(--color-text-muted); font-size:0.9rem; margin-top:0.3rem">You survived the full match!</p>
+      </div>
+
+      <div class="stats-grid" style="width:100%">
+        <div class="stat-card" style="border-color:rgba(255,215,0,0.4)">
+          <div class="stat-label">Final Rank</div>
+          <div class="stat-value" style="color:var(--color-gold)" id="v-rank">#1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Max Size</div>
+          <div class="stat-value" id="v-size">88</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Survival</div>
+          <div class="stat-value" id="v-survival">05:00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Kills</div>
+          <div class="stat-value" id="v-kills">12</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Score</div>
+          <div class="stat-value" id="v-score">3200</div>
+        </div>
+      </div>
+
+      <div class="result-btns" style="width:100%; display:flex; flex-direction:column; gap:0.5rem;">
+        <button id="btn-v-replay" class="btn btn-primary">🔄 Restart Game</button>
+        <button id="btn-v-shop" class="btn btn-secondary">🛒 Shop</button>
+        <button id="btn-v-menu" class="btn btn-ghost">🏠 Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REWARD ───────────────────────────────────────────── -->
+  <div id="screen-reward" class="screen">
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <h2>Rewards!</h2>
+      <div class="reward-display">
+        <div class="reward-big" id="reward-xp">+200 XP</div>
+        <div class="reward-big" id="reward-coins">+80 🪙</div>
+      </div>
+      <button id="btn-reward-continue" class="btn btn-primary" style="width:100%">Continue →</button>
+    </div>
+  </div>
+
+  <!-- ─── COLLECTION / SHOP ────────────────────────────────── -->
+  <div id="screen-collection" class="screen">
+    <div class="shop-panel animate-in">
+      
+      <!-- Top Header -->
+      <div class="shop-header">
+        <button id="btn-coll-back" class="shop-back-btn">← Back</button>
+        <h2 class="shop-title">BLACK MARKET</h2>
+        <div class="mm-currency-chip" style="margin-left:auto">
+          <span class="mm-coin-icon">🪙</span>
+          <span id="coll-coins">0</span>
+        </div>
+      </div>
+
+      <!-- Main Content (2 Columns on wide screens, stacked on mobile) -->
+      <div class="shop-content">
+        
+        <!-- Left: Live Preview Canvas -->
+        <div class="shop-preview-area">
+          <div class="shop-preview-canvas-container">
+            <canvas id="shop-preview-canvas" width="400" height="400"></canvas>
+            <!-- UI overlay for the active preview -->
+            <div class="shop-preview-info">
+              <h3 id="shop-preview-name">Select a Skin</h3>
+              <div id="shop-preview-rarity" class="rarity-tag rarity-common">COMMON</div>
+              <p id="shop-preview-desc" class="shop-preview-desc">Equip a new chassis.</p>
+            </div>
+            
+            <div class="shop-action-bar">
+              <button id="btn-equip-skin" class="btn btn-primary" style="display:none; width:100%;">EQUIP</button>
+              <button id="btn-buy-skin" class="btn btn-gold" style="display:none; width:100%;">
+                BUY <span id="shop-buy-price">1000</span> 🪙
+              </button>
+              <div id="shop-status-text" style="display:none; color:#E2E8F0; font-weight:bold;">EQUIPPED</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Scrollable Grid -->
+        <div class="shop-list-area">
+          <div id="collection-grid" class="shop-grid scroll-area">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ─── SETTINGS ─────────────────────────────────────────── -->
+  <div id="screen-settings" class="screen">
+    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:flex-start;">
+      <div class="screen-header">
+        <button id="btn-sett-back" class="btn btn-icon">←</button>
+        <h2>⚙️ Settings</h2>
+      </div>
+      <div class="settings-list" style="width:100%">
+        <!-- Master Volume -->
+        <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="settings-label">Global Volume</span>
+            <span id="label-vol-master" style="color:var(--color-text-muted); font-size:0.85rem;">80%</span>
+          </div>
+          <input type="range" id="slider-vol-master" class="settings-slider" min="0" max="100" value="80">
+        </div>
+        
+        <!-- Music Volume -->
+        <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="settings-label">🎵 Music</span>
+            <span id="label-vol-music" style="color:var(--color-text-muted); font-size:0.85rem;">50%</span>
+          </div>
+          <input type="range" id="slider-vol-music" class="settings-slider" min="0" max="100" value="50">
+        </div>
+        
+        <!-- SFX Volume -->
+        <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="settings-label">🔊 Sound Effects</span>
+            <span id="label-vol-sfx" style="color:var(--color-text-muted); font-size:0.85rem;">70%</span>
+          </div>
+          <input type="range" id="slider-vol-sfx" class="settings-slider" min="0" max="100" value="70">
+        </div>
+
+        <div class="settings-row">
+          <span class="settings-label">🎮 Version</span>
+          <span style="color:var(--color-text-muted); font-size:0.85rem;">1.0.0</span>
+        </div>
+      </div>
+      <button id="btn-reset-data" class="btn btn-danger">🗑️ Reset All Progress</button>
+    </div>
+  </div>
+
+</div><!-- #ui-root -->
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
