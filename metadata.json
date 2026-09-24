@@ -1,0 +1,7 @@
+{
+  "name": "BloodRush.io — Mosquito Survival Arena",
+  "description": "BloodRush.io — Hunt, grow, and survive in a chaotic mosquito battle arena. Eat smaller enemies, dodge bigger ones, and claw your way to #1!",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
