@@ -21,6 +21,14 @@ const PERSONALITIES = [
   AIPersonality.AGGRESSOR,
 ];
 
+const SKINS_BY_TIER = {
+  default: CONFIG.SKINS.filter(s => !s.rarity || s.rarity === "DEFAULT"),
+  tier1: CONFIG.SKINS.filter(s => s.cost === 1000),
+  tier2: CONFIG.SKINS.filter(s => s.cost === 10000),
+  tier3: CONFIG.SKINS.filter(s => s.cost === 50000),
+  tier4: CONFIG.SKINS.filter(s => s.cost === 100000),
+};
+
 export class EnemyManager {
   constructor(foodManager = null) {
     this.enemies     = [];
@@ -91,21 +99,8 @@ export class EnemyManager {
     else if (r < w.tier4 + w.tier3) tier = "tier3";
     else if (r < w.tier4 + w.tier3 + w.tier2) tier = "tier2";
     else if (r < w.tier4 + w.tier3 + w.tier2 + w.tier1) tier = "tier1";
-    
-    let skinChoices = [];
-    if (tier === "default") {
-      skinChoices = CONFIG.SKINS.filter(s => !s.rarity || s.rarity === "DEFAULT");
-    } else if (tier === "tier1") {
-      skinChoices = CONFIG.SKINS.filter(s => s.cost === 1000);
-    } else if (tier === "tier2") {
-      skinChoices = CONFIG.SKINS.filter(s => s.cost === 10000);
-    } else if (tier === "tier3") {
-      skinChoices = CONFIG.SKINS.filter(s => s.cost === 50000);
-    } else if (tier === "tier4") {
-      skinChoices = CONFIG.SKINS.filter(s => s.cost === 100000);
-    }
-
-    if (skinChoices.length > 0) {
+    const skinChoices = SKINS_BY_TIER[tier] || SKINS_BY_TIER.default;
+    if (skinChoices && skinChoices.length > 0) {
       const chosen = skinChoices[Math.floor(Math.random() * skinChoices.length)];
       return chosen.id;
     }
@@ -185,28 +180,36 @@ export class EnemyManager {
     }
 
     // Remove dead enemies whose death animation completed
-    const toRemove = this.enemies.filter((e) => !e.alive && e.deathTimer > 0.8);
-    for (const e of toRemove) {
-      this._respawnQueue.push({
-        timer:       CONFIG.ENEMY.RESPAWN_DELAY + rng(0, 2),
-        size:        this._randomSize(matchPhase),
-        personality: this._randomPersonality(),
-        skinId:      this._randomSkin(),
-        playerX:     player?.x,
-        playerY:     player?.y,
-      });
+    let writeIdx = 0;
+    for (let i = 0, len = this.enemies.length; i < len; i++) {
+      const e = this.enemies[i];
+      if (!e.alive && e.deathTimer > 0.8) {
+        this._respawnQueue.push({
+          timer:       CONFIG.ENEMY.RESPAWN_DELAY + rng(0, 2),
+          size:        this._randomSize(matchPhase),
+          personality: this._randomPersonality(),
+          skinId:      this._randomSkin(),
+          playerX:     player?.x,
+          playerY:     player?.y,
+        });
+      } else {
+        this.enemies[writeIdx++] = e;
+      }
     }
-    this.enemies = this.enemies.filter((e) => e.alive || e.deathTimer <= 0.8);
+    this.enemies.length = writeIdx;
 
-    // Process respawn queue
-    this._respawnQueue = this._respawnQueue.filter((r) => {
+    // Process respawn queue in-place
+    let rWrite = 0;
+    for (let i = 0, len = this._respawnQueue.length; i < len; i++) {
+      const r = this._respawnQueue[i];
       r.timer -= dt;
       if (r.timer <= 0 && this.enemies.length < CONFIG.ENEMY.MAX_COUNT) {
         this._spawnOne(r.size, r.personality, r.playerX, r.playerY, r.skinId);
-        return false;
+      } else {
+        this._respawnQueue[rWrite++] = r;
       }
-      return true;
-    });
+    }
+    this._respawnQueue.length = rWrite;
 
     // Enemy-vs-enemy eating & combat
     this._processEnemyEating(audioManager);
@@ -249,18 +252,25 @@ export class EnemyManager {
   }
 
   _processEnemyEating(audioManager) {
-    for (let i = 0; i < this.enemies.length; i++) {
-      const a = this.enemies[i];
+    const enemies = this.enemies;
+    const len = enemies.length;
+    for (let i = 0; i < len; i++) {
+      const a = enemies[i];
       if (!a.alive) continue;
-      for (let j = i + 1; j < this.enemies.length; j++) {
-        const b = this.enemies[j];
+      for (let j = i + 1; j < len; j++) {
+        const b = enemies[j];
         if (!b.alive) continue;
 
         // Skip if either has spawn protection
         if (a.spawnProtection > 0 || b.spawnProtection > 0) continue;
 
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (d < a.size + b.size) {
+        const rSum = a.size + b.size;
+        const dx = a.x - b.x;
+        if (dx > rSum || dx < -rSum) continue;
+        const dy = a.y - b.y;
+        if (dy > rSum || dy < -rSum) continue;
+
+        if (dx * dx + dy * dy < rSum * rSum) {
           const aCanEatB = a.canEat(b) || (a.isDashing && a.size >= b.size * 0.88);
           const bCanEatA = b.canEat(a) || (b.isDashing && b.size >= a.size * 0.88);
 
@@ -285,17 +295,33 @@ export class EnemyManager {
     if (!player || !player.isAlive()) return false;
     let ate = false;
     const pTip = player.proboscisTip;
+    const px = player.x, py = player.y, pSize = player.size;
+    const pTipX = pTip.x, pTipY = pTip.y;
 
-    for (const enemy of this.enemies) {
+    for (let i = 0, len = this.enemies.length; i < len; i++) {
+      const enemy = this.enemies[i];
       if (!enemy.alive) continue;
       // Spawn-protected enemies cannot be eaten
       if (enemy.spawnProtection > 0) continue;
 
-      const centerDist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-      const tipDist    = Math.hypot(pTip.x  - enemy.x, pTip.y  - enemy.y);
+      const rSum = pSize + enemy.size;
+      const dx = px - enemy.x;
+      const dy = py - enemy.y;
+      if (dx > rSum || dx < -rSum) {
+        // Check tip distance before bailing
+        const tdx = pTipX - enemy.x;
+        const tipLimit = enemy.size * 1.35;
+        if (tdx > tipLimit || tdx < -tipLimit) continue;
+      }
 
-      const isBodyHit = centerDist < player.size + enemy.size;
-      const isTipHit  = tipDist    < enemy.size * 1.35;
+      const centerDistSq = dx * dx + dy * dy;
+      const tdx = pTipX - enemy.x;
+      const tdy = pTipY - enemy.y;
+      const tipDistSq = tdx * tdx + tdy * tdy;
+      const tipR = enemy.size * 1.35;
+
+      const isBodyHit = centerDistSq < rSum * rSum;
+      const isTipHit  = tipDistSq    < tipR * tipR;
 
       if (isBodyHit || isTipHit) {
         const canKill =
@@ -329,16 +355,30 @@ export class EnemyManager {
   // ── Universal Combat: Enemy vs Player ─────────────────────
   processEnemyEatingPlayer(player, audioManager, onDamageFeedback = null) {
     if (!player || !player.isAlive() || player.isInvincible()) return false;
+    const px = player.x, py = player.y, pSize = player.size;
 
-    for (const enemy of this.enemies) {
+    for (let i = 0, len = this.enemies.length; i < len; i++) {
+      const enemy = this.enemies[i];
       if (!enemy.alive) continue;
 
-      const centerDist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-      const eTip       = enemy.proboscisTip;
-      const tipDist    = Math.hypot(eTip.x - player.x, eTip.y - player.y);
+      const rSum = enemy.size + pSize;
+      const dx = px - enemy.x;
+      const dy = py - enemy.y;
+      const eTip = enemy.proboscisTip;
+      const tipR = pSize * 1.35;
 
-      const isBodyHit = centerDist < enemy.size + player.size;
-      const isTipHit  = tipDist    < player.size * 1.35;
+      if (dx > rSum || dx < -rSum) {
+        const tdx = eTip.x - px;
+        if (tdx > tipR || tdx < -tipR) continue;
+      }
+
+      const centerDistSq = dx * dx + dy * dy;
+      const tdx = eTip.x - px;
+      const tdy = eTip.y - py;
+      const tipDistSq = tdx * tdx + tdy * tdy;
+
+      const isBodyHit = centerDistSq < rSum * rSum;
+      const isTipHit  = tipDistSq    < tipR * tipR;
 
       if (isBodyHit || isTipHit) {
         const enemyCanKill =
@@ -385,10 +425,23 @@ export class EnemyManager {
     return list;
   }
 
+  getAliveCount() {
+    let count = 0;
+    for (let i = 0, len = this.enemies.length; i < len; i++) {
+      if (this.enemies[i].alive) count++;
+    }
+    return count;
+  }
+
   getPlayerRank(player, username = "You") {
-    const rankings = this.getRankings(player, username);
-    const idx = rankings.findIndex((r) => r.isPlayer);
-    return idx >= 0 ? idx + 1 : rankings.length + 1;
+    if (!player || !player.isAlive()) return this.getAliveCount() + 1;
+    let rank = 1;
+    const pSize = player.size;
+    for (let i = 0, len = this.enemies.length; i < len; i++) {
+      const e = this.enemies[i];
+      if (e.alive && e.size > pSize) rank++;
+    }
+    return rank;
   }
 }
 

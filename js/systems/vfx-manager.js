@@ -38,14 +38,17 @@ class ParticlePool {
       if (p.life <= 0) {
         p.active = false;
         this.pool.push(p);
-        this.active.splice(i, 1);
+        const last = this.active.pop();
+        if (i < this.active.length) {
+          this.active[i] = last;
+        }
       } else {
         // Basic physics
         if (p.type === "void_pull") {
           // Void Mosquito pulls particles inward
           const dx = p.data.targetX - p.x;
           const dy = p.data.targetY - p.y;
-          const dist = Math.hypot(dx, dy) || 1;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
           p.vx += (dx / dist) * 800 * dt;
           p.vy += (dy / dist) * 800 * dt;
         } else {
@@ -251,32 +254,41 @@ export class VFXManager {
 
   // ── Render Global Particles ──
   renderParticles(ctx, camera) {
-    for (const p of this.particles.active) {
+    const active = this.particles.active;
+    const len = active.length;
+    if (len === 0) return;
+
+    let halfW = 0, halfH = 0, camX = 0, camY = 0;
+    if (camera) {
+      halfW = (camera.canvasWidth / camera.zoom) / 2;
+      halfH = (camera.canvasHeight / camera.zoom) / 2;
+      camX = camera.x;
+      camY = camera.y;
+    }
+
+    for (let i = 0; i < len; i++) {
+      const p = active[i];
       // Basic camera culling
       if (camera) {
-        const halfW = (camera.canvasWidth / camera.zoom) / 2;
-        const halfH = (camera.canvasHeight / camera.zoom) / 2;
-        if (p.x < camera.x - halfW - p.size || p.x > camera.x + halfW + p.size ||
-            p.y < camera.y - halfH - p.size || p.y > camera.y + halfH + p.size) {
+        if (p.x < camX - halfW - p.size || p.x > camX + halfW + p.size ||
+            p.y < camY - halfH - p.size || p.y > camY + halfH + p.size) {
           continue;
         }
       }
 
-      ctx.save();
       const alpha = Math.max(0, p.life / p.maxLife);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;
 
-      ctx.translate(p.x, p.y);
       if (p.type === "square") {
-        ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
+        ctx.fillRect(p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
       } else {
         ctx.beginPath();
-        ctx.arc(0, 0, p.size * (0.5 + 0.5 * alpha), 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.size * (0.5 + 0.5 * alpha), 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.restore();
     }
+    ctx.globalAlpha = 1;
   }
 
   // ── Render Above Entity (Lightning, Overlays, The Hive Drones) ──

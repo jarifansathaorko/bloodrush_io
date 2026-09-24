@@ -428,4 +428,11 @@ export const CONFIG = {
   },
 };
 
+export const SKIN_MAP = new Map(CONFIG.SKINS.map((s) => [s.id, s]));
+export function getSkin(id) {
+  return SKIN_MAP.get(id) || CONFIG.SKINS[0];
+}
+CONFIG.getSkin = getSkin;
+CONFIG.SKIN_MAP = SKIN_MAP;
+
 export default CONFIG;

@@ -55,7 +55,7 @@ export class Enemy {
     this.speed = this._calcSpeed();
 
     this.skinId = skinId;
-    const skinConfig = CONFIG.SKINS.find(s => s.id === skinId);
+    const skinConfig = CONFIG.getSkin ? CONFIG.getSkin(skinId) : CONFIG.SKINS.find(s => s.id === skinId);
     if (skinConfig && skinId !== "default") {
       this.color = skinConfig.color;
       this.glowColor = skinConfig.glowColor;

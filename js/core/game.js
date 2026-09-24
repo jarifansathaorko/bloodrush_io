@@ -246,7 +246,7 @@ export class GameManager {
     const gridCanvases = document.querySelectorAll(".shop-card-canvas");
     gridCanvases.forEach(c => {
       const skinId = c.dataset.skinId;
-      const skinDef = CONFIG.SKINS.find(s => s.id === skinId);
+      const skinDef = CONFIG.getSkin ? CONFIG.getSkin(skinId) : CONFIG.SKINS.find(s => s.id === skinId);
       if (skinDef) {
         const cCtx = c.getContext("2d");
         cCtx.clearRect(0, 0, c.width, c.height);
@@ -547,7 +547,7 @@ export class GameManager {
 
     // Init player
     const skinId = this.save.get("equippedSkin") || "cyber_drone";
-    const skin = CONFIG.SKINS.find((s) => s.id === skinId) || CONFIG.SKINS[0];
+    const skin = CONFIG.getSkin ? CONFIG.getSkin(skinId) : (CONFIG.SKINS.find((s) => s.id === skinId) || CONFIG.SKINS[0]);
     this.player = new Player(
       CONFIG.ARENA.WIDTH / 2 + (Math.random() - 0.5) * 400,
       CONFIG.ARENA.HEIGHT / 2 + (Math.random() - 0.5) * 400,
@@ -837,7 +837,7 @@ export class GameManager {
 
     // Initial select (either equipped or default)
     const eq = this.save.data.equippedSkin || "default";
-    const initialSkin = CONFIG.SKINS.find(s => s.id === eq) || CONFIG.SKINS[0];
+    const initialSkin = CONFIG.getSkin ? CONFIG.getSkin(eq) : (CONFIG.SKINS.find(s => s.id === eq) || CONFIG.SKINS[0]);
     
     // Visually mark it selected in grid
     setTimeout(() => {

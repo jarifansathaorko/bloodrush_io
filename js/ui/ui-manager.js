@@ -44,7 +44,7 @@ export class UIManager {
     if (!player) return;
 
     const rank  = enemyManager.getPlayerRank(player, username);
-    const total = enemyManager.enemies.filter((e) => e.alive).length + 1;
+    const total = enemyManager.getAliveCount() + (player && player.isAlive() ? 1 : 0);
     const size  = Math.floor(player.size);
     const time  = matchManager.formatTime();
     const phase = matchManager.phase;

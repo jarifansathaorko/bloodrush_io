@@ -173,36 +173,92 @@ export class Renderer {
     );
   }
 
+  // ── Pre-rendered Obsidian Shard Sprite ───────────────────
+  _getShardSprite(s) {
+    if (s._sprite) return s._sprite;
+    const padding = 24;
+    const size = Math.ceil((s.r + padding) * 2);
+    const half = size / 2;
+    const can = document.createElement("canvas");
+    can.width = size;
+    can.height = size;
+    const c = can.getContext("2d");
+
+    c.translate(half, half);
+    c.rotate(s.rotation);
+
+    // Shadow
+    c.fillStyle = "rgba(0,0,0,0.5)";
+    c.beginPath();
+    c.moveTo(s.points[0].x + 8, s.points[0].y + 12);
+    for (let i = 1; i < s.points.length; i++) c.lineTo(s.points[i].x + 8, s.points[i].y + 12);
+    c.fill();
+
+    // Base shape
+    c.fillStyle = CONFIG.COLORS.ROCK;
+    c.strokeStyle = CONFIG.COLORS.ARENA_BORDER;
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(s.points[0].x, s.points[0].y);
+    for (let i = 1; i < s.points.length; i++) c.lineTo(s.points[i].x, s.points[i].y);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Highlight geometry
+    c.fillStyle = CONFIG.COLORS.ROCK_HIGHLIGHT;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(s.points[0].x, s.points[0].y);
+    c.lineTo(s.points[1].x, s.points[1].y);
+    c.closePath();
+    c.fill();
+
+    s._sprite = can;
+    s._halfSize = half;
+    return can;
+  }
+
   // ── Cyber Arena Background & Circuits ────────────────────
   _drawBackground(ctx, env, camera) {
     const W = CONFIG.ARENA.WIDTH, H = CONFIG.ARENA.HEIGHT;
 
-    // Outer cyber void background
-    ctx.fillStyle = CONFIG.COLORS.ARENA_BG;
-    ctx.fillRect(0, 0, W, H);
+    // Outer cyber void background - clamp to camera viewport for massive fillrate savings
+    if (camera) {
+      const halfW = (camera.canvasWidth / camera.zoom) / 2 + 100;
+      const halfH = (camera.canvasHeight / camera.zoom) / 2 + 100;
+      const vx = Math.max(0, camera.x - halfW);
+      const vy = Math.max(0, camera.y - halfH);
+      const vw = Math.min(W - vx, halfW * 2);
+      const vh = Math.min(H - vy, halfH * 2);
+      ctx.fillStyle = CONFIG.COLORS.ARENA_BG;
+      ctx.fillRect(vx, vy, vw, vh);
+    } else {
+      ctx.fillStyle = CONFIG.COLORS.ARENA_BG;
+      ctx.fillRect(0, 0, W, H);
+    }
 
-    // Subtle Hex or Grid overlay
-    ctx.strokeStyle = "rgba(15, 22, 38, 0.4)";
-    ctx.lineWidth = 2;
-    // We won't draw a full 8000x8000 grid for performance, we just rely on gridNodes
-
-    // Circuit pathways across 8000x8000 world
+    // Circuit pathways across 8000x8000 world (zero save/restore)
     if (env && env.circuits) {
-      for (const p of env.circuits) {
-        // Broad phase culling for lines
+      let halfW = 0, halfH = 0, camX = 0, camY = 0;
+      if (camera) {
+        halfW = (camera.canvasWidth / camera.zoom) / 2;
+        halfH = (camera.canvasHeight / camera.zoom) / 2;
+        camX = camera.x;
+        camY = camera.y;
+      }
+      for (let i = 0, len = env.circuits.length; i < len; i++) {
+        const p = env.circuits[i];
         if (camera) {
           const minX = Math.min(p.startX, p.endX);
           const maxX = Math.max(p.startX, p.endX);
           const minY = Math.min(p.startY, p.endY);
           const maxY = Math.max(p.startY, p.endY);
-          const halfW = (camera.canvasWidth / camera.zoom) / 2;
-          const halfH = (camera.canvasHeight / camera.zoom) / 2;
-          if (maxX < camera.x - halfW || minX > camera.x + halfW ||
-              maxY < camera.y - halfH || minY > camera.y + halfH) {
+          if (maxX < camX - halfW || minX > camX + halfW ||
+              maxY < camY - halfH || minY > camY + halfH) {
             continue;
           }
         }
-        ctx.save();
         ctx.strokeStyle = CONFIG.COLORS.PATH_GRAVEL;
         ctx.lineWidth = p.width;
         ctx.beginPath();
@@ -210,7 +266,7 @@ export class Renderer {
         ctx.lineTo(p.endX, p.endY);
         ctx.stroke();
         
-        // Inner glowing core (simulated glow without shadow)
+        // Inner glowing core
         ctx.strokeStyle = "rgba(255, 23, 68, 0.15)";
         ctx.lineWidth = p.width * 0.4;
         ctx.stroke();
@@ -218,7 +274,6 @@ export class Renderer {
         ctx.strokeStyle = "rgba(255, 23, 68, 0.4)";
         ctx.lineWidth = p.width * 0.15;
         ctx.stroke();
-        ctx.restore();
       }
     }
   }
@@ -229,7 +284,8 @@ export class Renderer {
 
     // Grid Nodes
     ctx.fillStyle = "rgba(255, 23, 68, 0.15)";
-    for (const n of env.gridNodes) {
+    for (let i = 0, len = env.gridNodes.length; i < len; i++) {
+      const n = env.gridNodes[i];
       if (!this._isVisible(n.x, n.y, n.size, camera)) continue;
       const pulse = Math.sin(this.globalTime * 1.5 + n.pulseOffset);
       const r = n.size + pulse * 1.5;
@@ -239,7 +295,8 @@ export class Renderer {
     }
 
     // Plasma Pools
-    for (const p of env.plasmaPools) {
+    for (let i = 0, len = env.plasmaPools.length; i < len; i++) {
+      const p = env.plasmaPools[i];
       if (!this._isVisible(p.x, p.y, Math.max(p.rx, p.ry), camera)) continue;
       ctx.save();
       ctx.translate(p.x, p.y);
@@ -268,40 +325,12 @@ export class Renderer {
       ctx.restore();
     }
 
-    // Obsidian Shards
-    for (const s of env.shards) {
+    // Obsidian Shards (Pre-rendered sprite draw — zero save/restore/matrix calc)
+    for (let i = 0, len = env.shards.length; i < len; i++) {
+      const s = env.shards[i];
       if (!this._isVisible(s.x, s.y, s.r, camera)) continue;
-      ctx.save();
-      ctx.translate(s.x, s.y);
-      ctx.rotate(s.rotation);
-      
-      // Shadow
-      ctx.fillStyle = "rgba(0,0,0,0.5)";
-      ctx.beginPath();
-      ctx.moveTo(s.points[0].x + 8, s.points[0].y + 12);
-      for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x + 8, s.points[i].y + 12);
-      ctx.fill();
-
-      // Base shape
-      ctx.fillStyle = CONFIG.COLORS.ROCK;
-      ctx.strokeStyle = CONFIG.COLORS.ARENA_BORDER;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(s.points[0].x, s.points[0].y);
-      for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Highlight geometry
-      ctx.fillStyle = CONFIG.COLORS.ROCK_HIGHLIGHT;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(s.points[0].x, s.points[0].y);
-      ctx.lineTo(s.points[1].x, s.points[1].y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      const sprite = s._sprite || this._getShardSprite(s);
+      ctx.drawImage(sprite, s.x - s._halfSize, s.y - s._halfSize);
     }
 
     // Neon Zappers
@@ -375,75 +404,154 @@ export class Renderer {
     ctx.restore();
   }
 
-  // ── Food Items ────────────────────────────────────────────
+  // ── Food Items (Batched Rendering — Zero Save/Restore) ─────────
   _drawFoods(ctx, foodManager, camera) {
     if (!foodManager) return;
+    const foods = foodManager.foods;
+    const len = foods.length;
+    if (len === 0) return;
 
-    for (const food of foodManager.foods) {
-      if (food.collected) continue;
-      if (!this._isVisible(food.x, food.y, food.radius, camera)) continue;
-      const r = food.radius * food.pulse;
-      ctx.save();
-      ctx.translate(food.x, food.y);
-      ctx.rotate(this.globalTime * 2);
+    let halfW = 0, halfH = 0, camX = 0, camY = 0;
+    if (camera) {
+      halfW = (camera.canvasWidth / camera.zoom) / 2;
+      halfH = (camera.canvasHeight / camera.zoom) / 2;
+      camX = camera.x;
+      camY = camera.y;
+    }
 
-      if (food.isBlood) {
-        // Simulated glow
-        ctx.fillStyle = "rgba(255, 23, 68, 0.25)";
-        ctx.beginPath();
-        ctx.moveTo(0, -r * 1.4);
-        ctx.lineTo(r * 1.4, 0);
-        ctx.lineTo(0, r * 1.4);
-        ctx.lineTo(-r * 1.4, 0);
-        ctx.closePath();
-        ctx.fill();
+    const rot = this.globalTime * 2;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
 
-        // Rich Blood Cells (Red Diamond)
-        ctx.fillStyle = CONFIG.COLORS.BLOOD_DROP;
-        ctx.beginPath();
-        ctx.moveTo(0, -r);
-        ctx.lineTo(r, 0);
-        ctx.lineTo(0, r);
-        ctx.lineTo(-r, 0);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = "#FFFFFF";
-        ctx.beginPath();
-        ctx.moveTo(0, -r * 0.4);
-        ctx.lineTo(r * 0.4, 0);
-        ctx.lineTo(0, r * 0.4);
-        ctx.lineTo(-r * 0.4, 0);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        // Simulated glow
-        ctx.fillStyle = "rgba(0, 229, 255, 0.25)";
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (i / 6) * Math.PI * 2;
-          ctx.lineTo(Math.cos(angle) * r * 1.6, Math.sin(angle) * r * 1.6);
+    // Precompute 6 unit hexagon vertices rotated by rot
+    if (!this._hexCos) {
+      this._hexCos = new Float32Array(6);
+      this._hexSin = new Float32Array(6);
+      this._visibleBloodBuf = [];
+      this._visibleNectarBuf = [];
+    }
+    const hexCos = this._hexCos;
+    const hexSin = this._hexSin;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + rot;
+      hexCos[i] = Math.cos(a);
+      hexSin[i] = Math.sin(a);
+    }
+
+    const bloodBuf = this._visibleBloodBuf;
+    const nectarBuf = this._visibleNectarBuf;
+    bloodBuf.length = 0;
+    nectarBuf.length = 0;
+
+    for (let i = 0; i < len; i++) {
+      const f = foods[i];
+      if (f.collected) continue;
+      if (camera) {
+        const pad = f.radius * 2;
+        if (f.x < camX - halfW - pad || f.x > camX + halfW + pad ||
+            f.y < camY - halfH - pad || f.y > camY + halfH + pad) {
+          continue;
         }
-        ctx.closePath();
-        ctx.fill();
-
-        // Plasma Cores (Cyan Hexagon)
-        ctx.fillStyle = CONFIG.COLORS.NECTAR_DROP;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (i / 6) * Math.PI * 2;
-          ctx.lineTo(Math.cos(angle) * r * 1.2, Math.sin(angle) * r * 1.2);
-        }
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = "#FFFFFF";
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2);
-        ctx.fill();
       }
+      if (f.isBlood) {
+        bloodBuf.push(f);
+      } else {
+        nectarBuf.push(f);
+      }
+    }
 
-      ctx.restore();
+    // ── Batch 1: Blood Cells (Red Diamonds) ──
+    const bLen = bloodBuf.length;
+    if (bLen > 0) {
+      // 1. Simulated Glow
+      ctx.fillStyle = "rgba(255, 23, 68, 0.25)";
+      ctx.beginPath();
+      for (let i = 0; i < bLen; i++) {
+        const f = bloodBuf[i];
+        const r = f.radius * f.pulse * 1.4;
+        const x = f.x, y = f.y;
+        ctx.moveTo(x + r * sin, y - r * cos);
+        ctx.lineTo(x + r * cos, y + r * sin);
+        ctx.lineTo(x - r * sin, y + r * cos);
+        ctx.lineTo(x - r * cos, y - r * sin);
+        ctx.closePath();
+      }
+      ctx.fill();
+
+      // 2. Red Diamond Body
+      ctx.fillStyle = CONFIG.COLORS.BLOOD_DROP;
+      ctx.beginPath();
+      for (let i = 0; i < bLen; i++) {
+        const f = bloodBuf[i];
+        const r = f.radius * f.pulse;
+        const x = f.x, y = f.y;
+        ctx.moveTo(x + r * sin, y - r * cos);
+        ctx.lineTo(x + r * cos, y + r * sin);
+        ctx.lineTo(x - r * sin, y + r * cos);
+        ctx.lineTo(x - r * cos, y - r * sin);
+        ctx.closePath();
+      }
+      ctx.fill();
+
+      // 3. White Core Diamond
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      for (let i = 0; i < bLen; i++) {
+        const f = bloodBuf[i];
+        const r = f.radius * f.pulse * 0.4;
+        const x = f.x, y = f.y;
+        ctx.moveTo(x + r * sin, y - r * cos);
+        ctx.lineTo(x + r * cos, y + r * sin);
+        ctx.lineTo(x - r * sin, y + r * cos);
+        ctx.lineTo(x - r * cos, y - r * sin);
+        ctx.closePath();
+      }
+      ctx.fill();
+    }
+
+    // ── Batch 2: Nectar Drops (Cyan Hexagons) ──
+    const nLen = nectarBuf.length;
+    if (nLen > 0) {
+      // 1. Glow
+      ctx.fillStyle = "rgba(0, 229, 255, 0.25)";
+      ctx.beginPath();
+      for (let i = 0; i < nLen; i++) {
+        const f = nectarBuf[i];
+        const r = f.radius * f.pulse * 1.6;
+        const x = f.x, y = f.y;
+        ctx.moveTo(x + hexCos[0] * r, y + hexSin[0] * r);
+        for (let k = 1; k < 6; k++) {
+          ctx.lineTo(x + hexCos[k] * r, y + hexSin[k] * r);
+        }
+        ctx.closePath();
+      }
+      ctx.fill();
+
+      // 2. Cyan Hexagon Body
+      ctx.fillStyle = CONFIG.COLORS.NECTAR_DROP;
+      ctx.beginPath();
+      for (let i = 0; i < nLen; i++) {
+        const f = nectarBuf[i];
+        const r = f.radius * f.pulse * 1.2;
+        const x = f.x, y = f.y;
+        ctx.moveTo(x + hexCos[0] * r, y + hexSin[0] * r);
+        for (let k = 1; k < 6; k++) {
+          ctx.lineTo(x + hexCos[k] * r, y + hexSin[k] * r);
+        }
+        ctx.closePath();
+      }
+      ctx.fill();
+
+      // 3. White Center Circle
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      for (let i = 0; i < nLen; i++) {
+        const f = nectarBuf[i];
+        const r = f.radius * f.pulse * 0.4;
+        ctx.moveTo(f.x + r, f.y);
+        ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+      }
+      ctx.fill();
     }
   }
 
@@ -1180,12 +1288,13 @@ export class Renderer {
     const toRadar = (wx, wy) => {
       const dx = wx - player.x;
       const dy = wy - player.y;
-      const rDist = (R_SIZE / 2) * (Math.hypot(dx, dy) / radarRange);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const rDist = (R_SIZE / 2) * (dist / radarRange);
       const angle = Math.atan2(dy, dx);
       return {
         x: cx + Math.cos(angle) * rDist,
         y: cy + Math.sin(angle) * rDist,
-        dist: Math.hypot(dx, dy),
+        dist: dist,
         angle: angle,
       };
     };

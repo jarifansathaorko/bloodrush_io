@@ -87,21 +87,30 @@ export class FoodManager {
         player.powerup === "MAGNET"
           ? CONFIG.FOOD.MAGNET_POWERUP_RADIUS
           : CONFIG.FOOD.MAGNET_PULL_RADIUS + player.size * 0.9;
+      const magnetRadiusSq = magnetRadius * magnetRadius;
       const magnetSpeed = 440;
+      const px = player.x;
+      const py = player.y;
+      const pSize = player.size;
 
-      for (const food of this.foods) {
+      for (let i = 0, len = this.foods.length; i < len; i++) {
+        const food = this.foods[i];
         if (food.collected) continue;
-        const d = CollisionSystem.distance(player.x, player.y, food.x, food.y);
+        const dx = px - food.x;
+        const dy = py - food.y;
+        const distSq = dx * dx + dy * dy;
 
         // Magnetic pull
-        if (d < magnetRadius && d > 2) {
+        if (distSq < magnetRadiusSq && distSq > 4) {
+          const d = Math.sqrt(distSq);
           const pullFactor = 1 - d / magnetRadius;
-          food.x += ((player.x - food.x) / d) * magnetSpeed * pullFactor * dt;
-          food.y += ((player.y - food.y) / d) * magnetSpeed * pullFactor * dt;
+          food.x += (dx / d) * magnetSpeed * pullFactor * dt;
+          food.y += (dy / d) * magnetSpeed * pullFactor * dt;
         }
 
-        // Eat detection — pass isNectar so feedOnFood can give correct boost recharge
-        if (d < player.size + food.radius * 1.3) {
+        // Eat detection
+        const eatRadius = pSize + food.radius * 1.3;
+        if (distSq < eatRadius * eatRadius) {
           food.collected = true;
           const isNectar = !food.isBlood;
           player.feedOnFood(food.value, isNectar);
@@ -116,13 +125,23 @@ export class FoodManager {
 
     // ── Enemies graze on food ─────────────────────────────
     if (enemies) {
-      for (const enemy of enemies) {
+      for (let j = 0, eLen = enemies.length; j < eLen; j++) {
+        const enemy = enemies[j];
         if (!enemy.alive) continue;
         const eatRadius = enemy.size + 6;
-        for (const food of this.foods) {
+        const eatRadiusSq = eatRadius * eatRadius;
+        const ex = enemy.x;
+        const ey = enemy.y;
+
+        for (let i = 0, fLen = this.foods.length; i < fLen; i++) {
+          const food = this.foods[i];
           if (food.collected) continue;
-          const d = CollisionSystem.distance(enemy.x, enemy.y, food.x, food.y);
-          if (d < eatRadius) {
+          const dx = ex - food.x;
+          if (dx > eatRadius || dx < -eatRadius) continue;
+          const dy = ey - food.y;
+          if (dy > eatRadius || dy < -eatRadius) continue;
+
+          if (dx * dx + dy * dy < eatRadiusSq) {
             food.collected = true;
             const isNectar = !food.isBlood;
             // Enemies get 85% of the food value, but full boost recharge
@@ -132,18 +151,29 @@ export class FoodManager {
       }
     }
 
-    this.foods = this.foods.filter((f) => f.update(dt) && !f.collected);
+    // In-place compaction to eliminate GC allocation
+    let writeIdx = 0;
+    for (let i = 0, len = this.foods.length; i < len; i++) {
+      const f = this.foods[i];
+      if (f.update(dt) && !f.collected) {
+        this.foods[writeIdx++] = f;
+      }
+    }
+    this.foods.length = writeIdx;
   }
 
   getNearbyFood(x, y, maxDistance = 280) {
     let nearest = null;
-    let minDist = maxDistance;
-    for (const food of this.foods) {
+    let minDistSq = maxDistance * maxDistance;
+    for (let i = 0, len = this.foods.length; i < len; i++) {
+      const food = this.foods[i];
       if (food.collected) continue;
-      const d = CollisionSystem.distance(x, y, food.x, food.y);
-      if (d < minDist) {
-        minDist  = d;
-        nearest  = food;
+      const dx = x - food.x;
+      const dy = y - food.y;
+      const dSq = dx * dx + dy * dy;
+      if (dSq < minDistSq) {
+        minDistSq = dSq;
+        nearest = food;
       }
     }
     return nearest;

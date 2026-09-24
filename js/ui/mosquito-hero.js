@@ -167,7 +167,7 @@ export class MosquitoHero {
       : "cyber_drone";
 
     if (this.renderer) {
-      const skinDef = CONFIG.SKINS.find((s) => s.id === skinId) || CONFIG.SKINS[0];
+      const skinDef = CONFIG.getSkin ? CONFIG.getSkin(skinId) : (CONFIG.SKINS.find((s) => s.id === skinId) || CONFIG.SKINS[0]);
       this.renderer._drawEntity(
         ctx,
         0,

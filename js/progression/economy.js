@@ -36,7 +36,7 @@ export class EconomyManager {
   }
 
   purchaseSkin(skinId) {
-    const skin = CONFIG.SKINS.find((s) => s.id === skinId);
+    const skin = CONFIG.getSkin ? CONFIG.getSkin(skinId) : CONFIG.SKINS.find((s) => s.id === skinId);
     if (!skin || skin.unlocked) return false;
     const data = this.save.data;
     if (data.coins < skin.cost) return false;
