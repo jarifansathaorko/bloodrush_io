@@ -8,9 +8,11 @@ export const FoodType = {
   NECTAR: "NECTAR",
 };
 
+let _nextFoodId = 1;
+
 export class Food {
   constructor(x, y, type = FoodType.BLOOD, value = null) {
-    this.id = Math.random().toString(36).substr(2, 9);
+    this.id = _nextFoodId++;
     this.x = x;
     this.y = y;
     this.type = type;

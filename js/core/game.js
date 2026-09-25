@@ -5,7 +5,7 @@ import { CONFIG } from "../config.js";
 import { TimeManager } from "./time.js";
 import { StateMachine, AppState, MatchState } from "./state-machine.js";
 import { InputManager } from "./input.js";
-import { Player } from "../entities/player.js";
+import { Player, PlayerState } from "../entities/player.js";
 import { EnvironmentManager } from "../systems/environment.js";
 import { Renderer } from "../systems/renderer.js";
 import { CameraManager } from "../systems/camera.js";
@@ -89,7 +89,6 @@ export class GameManager {
 
     // Load save
     const saveData = this.save.load();
-    this.username = this.save.getUsername() || "";
     this.username = this.save.getUsername() || "";
 
     // Restore settings
@@ -486,36 +485,7 @@ export class GameManager {
     }
   }
 
-  // Step 1: Prompt for Username
-  goNameInput() {
-    const inputEl = document.getElementById("input-player-name");
-    if (inputEl) {
-      inputEl.value = this.username || this.save.getUsername() || "";
-      setTimeout(() => inputEl.focus(), 150);
-    }
-    this.uiMgr.showScreen("screen-name-input");
-    this.appState.transition(AppState.NAME_INPUT);
-  }
-
-  submitUsername() {
-    const inputEl = document.getElementById("input-player-name");
-    let name = inputEl ? inputEl.value.trim() : "";
-    if (!name) {
-      if (inputEl) {
-        inputEl.classList.add("shake");
-        inputEl.placeholder = "Please enter a name!";
-        setTimeout(() => inputEl.classList.remove("shake"), 500);
-      }
-      return;
-    }
-
-    name = name.slice(0, 15);
-    this.username = name;
-    this.save.setUsername(name);
-    this.goModeSelect();
-  }
-
-  // Step 2: Mode Selection
+  // Mode Selection
   goModeSelect() {
     this.uiMgr.showScreen("screen-mode-select");
     this.appState.transition(AppState.MODE_SELECT);
@@ -682,7 +652,12 @@ export class GameManager {
 
     const adBtn = document.getElementById("btn-revive-ad");
     if (adBtn) {
-      adBtn.innerText = "▶️ WATCH AD TO REVIVE";
+      const icon = document.getElementById("btn-revive-icon");
+      const title = document.getElementById("btn-revive-title");
+      const sub = document.getElementById("btn-revive-sub");
+      if (icon) icon.textContent = "📺";
+      if (title) title.textContent = "WATCH AD TO REVIVE";
+      if (sub) sub.textContent = "Continue from where you left off";
       adBtn.disabled = false;
     }
 
@@ -696,7 +671,12 @@ export class GameManager {
     
     const adBtn = document.getElementById("btn-revive-ad");
     if (adBtn) {
-      adBtn.innerText = "Loading Ad...";
+      const icon = document.getElementById("btn-revive-icon");
+      const title = document.getElementById("btn-revive-title");
+      const sub = document.getElementById("btn-revive-sub");
+      if (icon) icon.textContent = "⏳";
+      if (title) title.textContent = "LOADING AD...";
+      if (sub) sub.textContent = "Please wait";
       adBtn.disabled = true;
     }
 
@@ -749,7 +729,7 @@ export class GameManager {
     this.player.survivalTime = this._deathSnapshot.survivalTime;
     
     // Revive
-    this.player.state = 2; // PlayerState.SPAWNING
+    this.player.state = PlayerState.SPAWNING;
     this.player.health = 1.0;
     this.player.spawnTimer = 3.0; // 3 seconds of invulnerability
     
@@ -853,7 +833,7 @@ export class GameManager {
   }
 
   goSettings() {
-    renderSettings(this);
+    renderSettings(this.save.data.settings);
     this.uiMgr.showScreen("screen-settings");
     this.appState.transition(AppState.SETTINGS);
   }

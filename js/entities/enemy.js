@@ -174,6 +174,7 @@ export class Enemy {
       this.boostEnergy >= ab.MIN_ENERGY_TO_USE
     ) {
       this.isDashing       = true;
+      this.speed           = this._calcSpeed();
       this.dashTimer       = CONFIG.PLAYER.DASH_DURATION * 1.05;
       this.boostBurstTimer = CONFIG.PLAYER.BOOST_BURST_DURATION;
       this.boostCooldown   = ab.COOLDOWN_AFTER_USE;
@@ -199,6 +200,7 @@ export class Enemy {
       this.boostEnergy >= escapeThresh
     ) {
       this.isDashing       = true;
+      this.speed           = this._calcSpeed();
       this.dashTimer       = CONFIG.PLAYER.DASH_DURATION * 1.1;
       this.boostBurstTimer = CONFIG.PLAYER.BOOST_BURST_DURATION;
       this.boostCooldown   = ab.COOLDOWN_AFTER_USE;
@@ -268,6 +270,7 @@ export class Enemy {
       this.dashTimer -= dt;
       if (this.dashTimer <= 0) {
         this.isDashing = false;
+        this.speed     = this._calcSpeed();
         // Revert to normal AI state after boost
         if (this.aiState === AIState.BOOST_ATTACK || this.aiState === AIState.BOOST_ESCAPE) {
           this.aiState = AIState.WANDER;

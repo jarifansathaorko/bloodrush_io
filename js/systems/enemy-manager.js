@@ -3,6 +3,7 @@
 // ============================================================
 import { CONFIG } from "../config.js";
 import { Enemy, AIPersonality } from "../entities/enemy.js";
+import { CollisionSystem } from "./collision.js";
 
 function rng(min, max) {
   return min + Math.random() * (max - min);
@@ -35,11 +36,14 @@ export class EnemyManager {
     this.foodMgr     = foodManager;
     this._respawnQueue = [];
     this.totalKilledByPlayer = 0;
+    this.grid = new CollisionSystem(120);
+    this._enemyCandidates = [];
 
     // ── Kill sound anti-spam ──────────────────────────────
     this._lastKillSoundTime = 0;
     this._killSoundCount    = 0;   // kills in rapid succession
     this._killSoundWindow   = 0;   // accumulator for multi-kill window
+    this._growthChimeTimer  = 0;   // frame-delayed growth audio timer
   }
 
   setFoodManager(foodManager) {
@@ -53,6 +57,7 @@ export class EnemyManager {
     this._lastKillSoundTime   = 0;
     this._killSoundCount      = 0;
     this._killSoundWindow     = 0;
+    this._growthChimeTimer    = 0;
     this._initialSpawn();
   }
 
@@ -179,6 +184,15 @@ export class EnemyManager {
       }
     }
 
+    // Frame-delayed growth chime (Step 15)
+    if (this._growthChimeTimer > 0) {
+      this._growthChimeTimer -= dt;
+      if (this._growthChimeTimer <= 0) {
+        this._growthChimeTimer = 0;
+        if (audioManager) audioManager.playGrowth();
+      }
+    }
+
     // Remove dead enemies whose death animation completed
     let writeIdx = 0;
     for (let i = 0, len = this.enemies.length; i < len; i++) {
@@ -242,8 +256,8 @@ export class EnemyManager {
     if (this._killSoundCount === 1) {
       if (isCrit) audioManager.playCrit();
       else        audioManager.playFeed();
-      // Growth chime with slight delay
-      setTimeout(() => audioManager.playGrowth(), 120);
+      // Growth chime with slight delay via frame update
+      this._growthChimeTimer = 0.12;
     } else if (this._killSoundCount <= 3) {
       // Lighter variation for second/third kill
       audioManager.playMultiKill(this._killSoundCount);
@@ -254,15 +268,24 @@ export class EnemyManager {
   _processEnemyEating(audioManager) {
     const enemies = this.enemies;
     const len = enemies.length;
+
+    this.grid.clear();
+    for (let i = 0; i < len; i++) {
+      const e = enemies[i];
+      e._idx = i;
+      if (e.alive && e.spawnProtection <= 0) {
+        this.grid.insert(e);
+      }
+    }
+
     for (let i = 0; i < len; i++) {
       const a = enemies[i];
-      if (!a.alive) continue;
-      for (let j = i + 1; j < len; j++) {
-        const b = enemies[j];
-        if (!b.alive) continue;
+      if (!a.alive || a.spawnProtection > 0) continue;
 
-        // Skip if either has spawn protection
-        if (a.spawnProtection > 0 || b.spawnProtection > 0) continue;
+      const candidates = this.grid.query(a.x, a.y, a.size + 15, this._enemyCandidates);
+      for (let k = 0, cLen = candidates.length; k < cLen; k++) {
+        const b = candidates[k];
+        if (b === a || !b.alive || b.spawnProtection > 0 || a._idx >= b._idx) continue;
 
         const rSum = a.size + b.size;
         const dx = a.x - b.x;
@@ -284,6 +307,7 @@ export class EnemyManager {
             a.die();
             if (this.foodMgr) this.foodMgr.spawnCorpseBurst(a.x, a.y, 8, a.size / 15);
             if (audioManager) audioManager.playEnemyDeath();
+            break;
           }
         }
       }

@@ -26,7 +26,7 @@ export class CameraManager {
     this._targetY = player.y;
     // Zoom out slightly as player grows (allowing much smaller minimum zoom for huge sizes)
     const sizeFactor = Math.max(1, player.size / CONFIG.PLAYER.START_SIZE);
-    this._targetZoom = Math.max(0.1, 1.0 / Math.pow(sizeFactor, 0.4));
+    this._targetZoom = Math.max(0.35, 1.0 / Math.pow(sizeFactor, 0.4));
   }
 
   update(dt) {

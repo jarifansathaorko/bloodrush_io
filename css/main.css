@@ -250,3 +250,69 @@ h2 {
   scrollbar-width: thin;
   scrollbar-color: var(--color-surface3) transparent;
 }
+
+/* ── Game Preloader ─────────────────────────────────────────── */
+#game-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(circle at center, #1C1310 0%, #080706 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s ease;
+}
+
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.loader-mosquito {
+  font-size: 3.5rem;
+  animation: float 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px rgba(232, 69, 10, 0.6));
+}
+
+.loader-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(232, 69, 10, 0.7);
+}
+
+.loader-bar-bg {
+  width: 220px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.loader-bar-fill {
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, #E8450A, #FF6B35, #FFD700);
+  border-radius: 999px;
+  animation: loaderProgress 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes loaderProgress {
+  0% { transform: translateX(-100%); width: 25%; }
+  50% { width: 60%; }
+  100% { transform: translateX(250%); width: 35%; }
+}
+
+.loader-status {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 1px;
+}

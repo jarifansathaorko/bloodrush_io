@@ -5,7 +5,6 @@
 
 const SCREENS = [
   "screen-main-menu",
-  "screen-name-input",
   "screen-mode-select",
   "screen-pre-match",
   "screen-gameplay",
@@ -121,20 +120,71 @@ export class UIManager {
   }
 
   updateLeaderboard(rankings) {
-    const el = document.getElementById("hud-leaderboard");
-    if (!el || !rankings) return;
+    if (!this._lbEl) {
+      this._lbEl = document.getElementById("hud-leaderboard");
+    }
+    if (!this._lbEl || !rankings) return;
+
+    if (!this._lbRows) {
+      this._lbRows = [];
+    }
+
     const top5 = rankings.slice(0, 5);
-    el.innerHTML = top5
-      .map(
-        (r, i) => `
-      <div class="lb-row${r.isPlayer ? " lb-player" : ""}">
-        <span class="lb-rank">#${i + 1}</span>
-        <span class="lb-name">${r.name}</span>
-        <span class="lb-size">${Math.floor(r.size)}</span>
-      </div>
-    `,
-      )
-      .join("");
+
+    while (this._lbRows.length < top5.length) {
+      const row = document.createElement("div");
+      row.className = "lb-row";
+
+      const rank = document.createElement("span");
+      rank.className = "lb-rank";
+
+      const name = document.createElement("span");
+      name.className = "lb-name";
+
+      const size = document.createElement("span");
+      size.className = "lb-size";
+
+      row.appendChild(rank);
+      row.appendChild(name);
+      row.appendChild(size);
+
+      this._lbEl.appendChild(row);
+      this._lbRows.push({ row, rank, name, size, isPlayer: false, textRank: "", textName: "", textSize: "" });
+    }
+
+    for (let i = 0; i < this._lbRows.length; i++) {
+      const rowItem = this._lbRows[i];
+      if (i < top5.length) {
+        const r = top5[i];
+        rowItem.row.style.display = "";
+
+        const isPlayer = !!r.isPlayer;
+        if (rowItem.isPlayer !== isPlayer) {
+          rowItem.row.className = `lb-row${isPlayer ? " lb-player" : ""}`;
+          rowItem.isPlayer = isPlayer;
+        }
+
+        const rankStr = `#${i + 1}`;
+        if (rowItem.textRank !== rankStr) {
+          rowItem.rank.textContent = rankStr;
+          rowItem.textRank = rankStr;
+        }
+
+        const nameStr = r.name || "";
+        if (rowItem.textName !== nameStr) {
+          rowItem.name.textContent = nameStr;
+          rowItem.textName = nameStr;
+        }
+
+        const sizeStr = `${Math.floor(r.size)}`;
+        if (rowItem.textSize !== sizeStr) {
+          rowItem.size.textContent = sizeStr;
+          rowItem.textSize = sizeStr;
+        }
+      } else {
+        rowItem.row.style.display = "none";
+      }
+    }
   }
 
   updateJoystick(joystickState) {
@@ -317,6 +367,70 @@ export class UIManager {
     );
 
     this.showScreen("screen-victory");
+  }
+
+  showToast(message, type = "info", duration = 3000) {
+    let container = document.getElementById("toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toast-container";
+      container.style.cssText = `
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+      `;
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    const colors = {
+      success: "linear-gradient(135deg, rgba(76, 175, 80, 0.95), rgba(46, 125, 50, 0.95))",
+      warning: "linear-gradient(135deg, rgba(255, 152, 0, 0.95), rgba(239, 108, 0, 0.95))",
+      reward:  "linear-gradient(135deg, rgba(255, 215, 0, 0.95), rgba(255, 140, 0, 0.95))",
+      danger:  "linear-gradient(135deg, rgba(229, 57, 53, 0.95), rgba(183, 28, 28, 0.95))",
+      info:    "linear-gradient(135deg, rgba(30, 30, 40, 0.95), rgba(15, 15, 25, 0.95))"
+    };
+
+    toast.style.cssText = `
+      background: ${colors[type] || colors.info};
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 12px 24px;
+      border-radius: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transform: translateY(-20px) scale(0.9);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+      text-align: center;
+    `;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.style.opacity = "1";
+      toast.style.transform = "translateY(0) scale(1)";
+    });
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(-15px) scale(0.95)";
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, duration);
   }
 
   _set(id, val) {

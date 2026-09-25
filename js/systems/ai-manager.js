@@ -423,9 +423,10 @@ export class AIManager {
   }
 
   _nearestBush(e) {
-    if (!this.env || !this.env.bushes) return null;
+    // Use obsidian shards as cover (bushes no longer exist in the environment)
+    if (!this.env || !this.env.shards) return null;
     let best = null, bestDist = Infinity;
-    for (const b of this.env.bushes) {
+    for (const b of this.env.shards) {
       const d = Math.hypot(e.x - b.x, e.y - b.y);
       if (d < bestDist) {
         best     = b;

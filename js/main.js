@@ -14,6 +14,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   window.game = game; // expose for debugging
   await game.init();
 
+  const loader = document.getElementById("game-loader");
+  if (loader) {
+    loader.style.opacity = "0";
+    loader.style.pointerEvents = "none";
+    setTimeout(() => {
+      if (loader.parentNode) loader.parentNode.removeChild(loader);
+    }, 400);
+  }
+
   // Browsers block autoplay until the user interacts with the page.
   // This listener starts the music on the very first click/keypress.
   const startAudioOnInteract = () => {

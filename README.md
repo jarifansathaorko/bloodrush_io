@@ -1,8 +1,9 @@
-# 🦟 BloodRush.io
+# 🦟 BloodRush.io (v1.5.1)
 
-**A complete HTML5 mosquito survival .io game — eat or be eaten!**
+**A high-performance HTML5 mosquito survival .io game — eat, dash, and climb the food chain!**
 
 ![BloodRush.io](https://img.shields.io/badge/Platform-HTML5-orange)
+![Version](https://img.shields.io/badge/Version-v1.5.1-crimson)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![CrazyGames](https://img.shields.io/badge/Target-CrazyGames-green)
 
@@ -26,115 +27,93 @@ npx serve .
 |-------|--------|
 | `W A S D` / `↑ ↓ ← →` | Move mosquito |
 | `Space` / `Shift` / `Right Click` | 🚀 **Dash & Strike!** (Proboscis thrust attack) |
-| Touch D-Pad + Dash Button | Move & Dash (Mobile) |
+| Touch Joystick + Dash Button | Move & Dash (Mobile) |
 | `Esc` / Pause button | Pause game |
 
-**Goal:** Feed on sparkling ruby blood drops and golden flower nectar to grow fast, dash to strike smaller mosquitoes with your needle proboscis, avoid giant predators, and climb to #1!
+**Goal:** Feed on sparkling ruby blood drops and golden flower nectar to recharge boost stamina, dash to strike smaller mosquitoes with your needle proboscis, avoid giant predators, and climb to #1!
 
 ---
 
 ## 🎯 Core Gameplay & Combat Mechanics
 
-- **Dash & Strike Attack:** Press `Space`, `Shift`, or `Right-Click` to surge forward at **1.75x speed** with a proboscis thrust! Consumes stamina (recharges quickly).
-- **Passive Food System:** Over 200 sparkling **Blood Droplets** and **Golden Flower Nectar Orbs** scattered across the garden allow constant growth and create lively grazing zones.
-- **Corpse Bursts:** Devouring an enemy mosquito triggers a satisfying burst of blood drops for extra rewards!
-- **Realistic AI Awareness:** Enemies have realistic vision cones with blind spots behind them. Sneak up from behind or ambush enemies grazing on nectar!
-- **Eat Threshold:** You only need to be **5% larger** (`1.05x`) to eat a smaller mosquito.
+- **Dash & Strike Attack:** Press `Space`, `Shift`, or `Right-Click` to surge forward at **1.75x speed** with a proboscis thrust! Consumes stamina (recharged by food & kills).
+- **Passive Food System:** Over 400 sparkling **Blood Droplets** and **Golden Flower Nectar Orbs** scattered across the garden allow constant growth and dynamic grazing zones.
+- **Corpse Bursts:** Devouring an enemy mosquito triggers an explosive burst of blood droplets for instant rewards!
+- **Realistic AI Personalities:** 5 specialized AI behaviors (Wanderer, Hunter, Coward, Opportunist, Aggressor) with terrain obstacle cover-seeking and strategic boost attacks.
 - **Proboscis Piercing Collision:** Direct hits with your needle stinger guarantee clean, instant kills with floating combat feedback (`CRITICAL PIERCE!`, `CRUNCH!`).
-
-### Match Phases
-| Time | Phase | Description |
-|------|-------|-------------|
-| 0–30s | Hunt | Safe exploration, smaller enemies |
-| 30–75s | Compete | Competition increases |
-| 75–120s | Danger | Larger enemies, power-ups critical |
-| 120–180s | Zone Closing | Arena shrinks, final survival |
-
-### Power-ups
-| Icon | Name | Effect |
-|------|------|--------|
-| ⚡ | Speed | +40% speed for 5 seconds |
-| 🛡 | Shield | Block one lethal hit |
-| 🔥 | Frenzy | +50% growth for 8 seconds |
-| 🧲 | Magnet | Attract nearby power-ups |
-
-### AI Personalities
-- **Wanderer** — explores, avoids fights
-- **Hunter** — seeks smaller targets aggressively
-- **Coward** — flees larger enemies, hides in bushes
-- **Opportunist** — attacks weakened/smallest targets
-- **Aggressor** — constantly chases, high risk
+- **Rewarded Revives:** Watch an ad on death to revive directly in the arena with temporary invulnerability shields.
 
 ---
 
-## 🏗️ Architecture
+## ⚡ High-Performance Architecture (v1.5.1)
 
 ```
 bloodrush-io/
-├── index.html              ← App entry point (all 11 screens)
+├── index.html              ← App entry point with preloader & unified menu
 ├── css/
-│   ├── main.css            ← Design system (variables, typography, animations)
-│   └── ui.css              ← All screen & HUD component styles
+│   ├── main.css            ← Design system, typography, animations & preloader
+│   └── ui.css              ← Screen & HUD component styles
 ├── js/
-│   ├── main.js             ← Entry point (imports GameManager)
-│   ├── config.js           ← All game constants
+│   ├── main.js             ← Entry point (bootstrap & preloader dismissal)
+│   ├── config.js           ← Central game configuration & constants
 │   ├── core/
 │   │   ├── game.js         ← GameManager (main orchestrator, game loop)
 │   │   ├── state-machine.js← App + match state machines
 │   │   ├── input.js        ← Keyboard + touch + mouse input
 │   │   └── time.js         ← Delta time, FPS, fixed timestep
 │   ├── entities/
-│   │   ├── player.js       ← Player with state machine + power-ups
-│   │   ├── enemy.js        ← Enemy with AI state + personality
-│   │   └── powerup.js      ← Power-up entity with pulse animation
+│   │   ├── player.js       ← Player with state machine & power-up handling
+│   │   ├── enemy.js        ← Enemy entity with AI state, personality & dynamic speed
+│   │   ├── food.js         ← Blood drops & nectar with integer counter IDs
+│   │   └── powerup.js      ← Power-up entity with pulse animations
 │   ├── systems/
-│   │   ├── renderer.js     ← Canvas 2D rendering (all art = primitives)
-│   │   ├── camera.js       ← Smooth follow camera with zoom
-│   │   ├── collision.js    ← Spatial hash grid broad-phase collision
+│   │   ├── renderer.js     ← Canvas 2D rendering pipeline
+│   │   ├── camera.js       ← Smooth follow camera with zoom clamped to [0.35, 1.0]
+│   │   ├── collision.js    ← Zero-allocation spatial hash grid
 │   │   ├── match-manager.js← Timer, phases, arena shrink
-│   │   ├── enemy-manager.js← Enemy pool, respawn queue, eating logic
-│   │   ├── ai-manager.js   ← 5-personality AI state machine
-│   │   ├── spawn-manager.js← (reserved for future use)
-│   │   ├── powerup-manager.js← Power-up spawning + magnet physics
-│   │   └── environment.js  ← Procedural garden arena generation
+│   │   ├── enemy-manager.js← Spatial hash enemy collisions & frame-delayed audio
+│   │   ├── food-manager.js ← Spatial hash player & enemy food grazing
+│   │   ├── ai-manager.js   ← 5-personality AI state machine with cover-seeking
+│   │   ├── vfx-manager.js  ← Particle trails, glitch bytes, shockwaves & halos
+│   │   ├── skin-drawers.js ← Specialized procedural skin rendering
+│   │   ├── powerup-manager.js← Power-up spawning & magnet physics
+│   │   └── environment.js  ← Procedural garden arena & obsidian shards
 │   ├── ui/
-│   │   ├── ui-manager.js   ← Screen visibility + HUD updates
-│   │   └── screens.js      ← Button handlers, collection/mission UI
+│   │   ├── ui-manager.js   ← DOM element reuse & diffing, toast notifications
+│   │   └── screens.js      ← Button handlers, collection UI, non-blocking toasts
 │   ├── progression/
 │   │   ├── save-manager.js ← localStorage versioned persistence
 │   │   ├── economy.js      ← Match rewards, skin purchases
 │   │   └── missions.js     ← Daily mission system
 │   ├── audio/
-│   │   └── audio-manager.js← Web Audio API synthesizer (no files!)
+│   │   └── audio-manager.js← Web Audio API synthesizer (zero external audio files)
 │   └── sdk/
-│       └── crazygames.js   ← CrazyGames SDK stub (Basic Launch ready)
+│       └── crazygames.js   ← CrazyGames SDK integration & rewarded ads
 └── README.md
 ```
 
-### Key Design Decisions
+### Key Performance Innovations
 
-| Decision | Rationale |
-|----------|-----------|
-| No bundler | Opens directly in browser, simplest deployment |
-| Canvas 2D for world | Efficient, no DOM-per-entity overhead |
-| HTML/CSS for UI | Easy to style, accessible |
-| Web Audio synthesis | No audio file downloads, tiny footprint |
-| Canvas primitives for art | No image files, instant load |
-| Spatial hash collision | O(1) lookup vs O(n²) brute force |
-| ES6 modules | Clean imports, tree-shakeable, native browser support |
+| Feature | Solution | Impact |
+|---------|----------|--------|
+| **Spatial Grid Food Collision** | Replaced O(n) & O(n*m) loops with `CollisionSystem` spatial grid | Eliminates 32,000+ checks/frame |
+| **Spatial Grid Enemy Eating** | Replaced O(n²) pairwise loop with cell-bucket queries | Drops pair checks from 3,200 to ~80/frame |
+| **Zero-Allocation Grid** | Reuses array buckets in `CollisionSystem` without clearing Maps | 0 GC memory allocations per frame |
+| **Leaderboard DOM Diffing** | Cached DOM elements & diffed text/classes in `UIManager` | Eliminates innerHTML layout thrashing |
+| **Preloader & Font Optimization** | HTML preconnect + font-display:swap + CSS preloader | Zero layout jump, smooth first paint |
+| **Frame-Delayed Audio** | Replaced `setTimeout` with game loop delta-time accumulator | Deterministic audio, zero orphaned timers |
+| **In-Game Toast System** | Non-blocking glassmorphic toasts replace blocking `alert()` | Smooth uninterrupted gameplay & audio |
 
 ---
 
 ## 📦 CrazyGames Compliance
 
-- ✅ Initial download size: **< 50KB** (no external assets)
-- ✅ SDK stub: `gameplayStart/Stop` events ready
-- ✅ No ads during gameplay
-- ✅ No pay-to-win
+- ✅ Initial download size: **< 60KB**
+- ✅ SDK: `gameplayStart/Stop` and rewarded ad integration
+- ✅ No banner ads interrupting active gameplay
 - ✅ PEGI-12 compliant
-- ✅ Desktop + Mobile responsive
-- ✅ Relative paths only
-- ✅ Works without server
+- ✅ Mobile touch controls & desktop keyboard/mouse support
+- ✅ 100% relative paths, works standalone
 
 ---
 
@@ -145,37 +124,8 @@ All progress persists in `localStorage` under key `bloodrush_save_v1`:
 - Equipped & unlocked skins
 - Daily missions progress
 - Best score, best rank, total matches/kills
-- Settings (music/sfx)
-
-**Reset:** Settings screen → Reset All Progress
+- Settings (music/sfx volume and toggles)
 
 ---
 
-## 🚀 Development Phases Completed
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| 0 — Foundation | ✅ | HTML, CSS, config, entry point |
-| 1 — Core Systems | ✅ | Game loop, state machines, input, time |
-| 2 — Entities | ✅ | Player, enemy, power-up entities |
-| 3 — Systems | ✅ | All game systems (AI, collision, camera, renderer) |
-| 4 — Environment | ✅ | Procedural garden arena |
-| 5 — UI/Screens | ✅ | All 11 screens, HUD, leaderboard |
-| 6 — Progression | ✅ | Economy, missions, save system |
-| 7 — Audio | ✅ | Web Audio synthesizer |
-| 8 — CrazyGames | ✅ | SDK stub |
-
----
-
-## 🎨 Visual Style
-
-- **Background:** Warm ivory (#F5F0E8) world with dark UI chrome
-- **Player:** Orange-red accent (#E8450A) — always visually distinct
-- **Enemies:** Unique HSL hues per enemy
-- **Art style:** Pure Canvas 2D primitives — ellipses, arcs, beziers
-- **Mosquito anatomy:** Body, wings, eyes, proboscis, legs, name tag
-- **Font:** Outfit (Google Fonts)
-
----
-
-*Built with the BloodRush.io Master Development Prompt and CrazyGames DevBook guidelines.*
+*BloodRush.io — v1.5.1*

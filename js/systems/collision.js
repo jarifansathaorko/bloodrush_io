@@ -24,7 +24,9 @@ export class CollisionSystem {
   }
 
   clear() {
-    this._grid.clear();
+    for (const bucket of this._grid.values()) {
+      bucket.length = 0;
+    }
   }
 
   insert(entity) {
@@ -58,8 +60,8 @@ export class CollisionSystem {
     this._queryId = (this._queryId + 1) & 0x3fffffff;
     const qId = this._queryId;
 
-    const results = outResults || [];
-    if (outResults) results.length = 0;
+    const results = outResults || this._reusableResults;
+    results.length = 0;
 
     for (let cx = x0; cx <= x1; cx++) {
       for (let cy = y0; cy <= y1; cy++) {

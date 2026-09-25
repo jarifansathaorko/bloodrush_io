@@ -145,7 +145,9 @@ export function bindScreenHandlers(game) {
       }).catch(console.error);
     } else {
       navigator.clipboard.writeText(url).then(() => {
-        alert("Link copied to clipboard!");
+        if (game.ui && game.ui.showToast) {
+          game.ui.showToast("📋 Link copied to clipboard!", "info");
+        }
       });
     }
   });
@@ -154,7 +156,9 @@ export function bindScreenHandlers(game) {
   on("btn-claim-reward", () => {
     const amount = game.economy.claimDailyReward();
     if (amount) {
-      alert(`Claimed ${amount} 🪙!`);
+      if (game.ui && game.ui.showToast) {
+        game.ui.showToast(`🎉 Claimed ${amount} 🪙!`, "reward");
+      }
       // Update display immediately
       const el = document.getElementById("display-coins");
       if (el) el.textContent = game.save.data.coins;

@@ -14,6 +14,9 @@ export class FoodManager {
     this.env  = environment;
     this.foods = [];
     this._spawnTimer = 0;
+    this.grid = new CollisionSystem(100);
+    this._playerCandidates = [];
+    this._enemyCandidates = [];
     this.init();
   }
 
@@ -81,7 +84,16 @@ export class FoodManager {
       }
     }
 
-    // ── Player collects food ──────────────────────────────
+    // Re-index active foods into spatial grid
+    this.grid.clear();
+    for (let i = 0, len = this.foods.length; i < len; i++) {
+      const f = this.foods[i];
+      if (!f.collected) {
+        this.grid.insert(f);
+      }
+    }
+
+    // ── Player collects food (Step 6: Spatial Hash Query) ──
     if (player && player.isAlive()) {
       const magnetRadius =
         player.powerup === "MAGNET"
@@ -93,8 +105,9 @@ export class FoodManager {
       const py = player.y;
       const pSize = player.size;
 
-      for (let i = 0, len = this.foods.length; i < len; i++) {
-        const food = this.foods[i];
+      const candidates = this.grid.query(px, py, magnetRadius, this._playerCandidates);
+      for (let i = 0, len = candidates.length; i < len; i++) {
+        const food = candidates[i];
         if (food.collected) continue;
         const dx = px - food.x;
         const dy = py - food.y;
@@ -123,7 +136,7 @@ export class FoodManager {
       }
     }
 
-    // ── Enemies graze on food ─────────────────────────────
+    // ── Enemies graze on food (Step 7: Spatial Hash Query) ──
     if (enemies) {
       for (let j = 0, eLen = enemies.length; j < eLen; j++) {
         const enemy = enemies[j];
@@ -133,8 +146,9 @@ export class FoodManager {
         const ex = enemy.x;
         const ey = enemy.y;
 
-        for (let i = 0, fLen = this.foods.length; i < fLen; i++) {
-          const food = this.foods[i];
+        const candidates = this.grid.query(ex, ey, eatRadius, this._enemyCandidates);
+        for (let i = 0, fLen = candidates.length; i < fLen; i++) {
+          const food = candidates[i];
           if (food.collected) continue;
           const dx = ex - food.x;
           if (dx > eatRadius || dx < -eatRadius) continue;
@@ -165,8 +179,9 @@ export class FoodManager {
   getNearbyFood(x, y, maxDistance = 280) {
     let nearest = null;
     let minDistSq = maxDistance * maxDistance;
-    for (let i = 0, len = this.foods.length; i < len; i++) {
-      const food = this.foods[i];
+    const candidates = this.grid.query(x, y, maxDistance);
+    for (let i = 0, len = candidates.length; i < len; i++) {
+      const food = candidates[i];
       if (food.collected) continue;
       const dx = x - food.x;
       const dy = y - food.y;

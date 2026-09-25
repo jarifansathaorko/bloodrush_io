@@ -208,7 +208,6 @@ export class VFXManager {
         e.x, e.y, (Math.random()-0.5)*20, (Math.random()-0.5)*20,
         0.5, "#00E5FF", e.size * 0.1
       );
-    } else if (vfx === "bloodbyte") {
       this.particles.emit(
         e.x + (Math.random()-0.5)*e.size, e.y + (Math.random()-0.5)*e.size,
         0, 0, 0.4, "#FF1744", e.size * 0.15, "square"

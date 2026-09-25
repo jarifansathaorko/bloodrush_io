@@ -9,10 +9,26 @@
   <meta property="og:title" content="BloodRush.io">
   <meta property="og:description" content="Mosquito survival arena — eat or be eaten!">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/ui.css">
 </head>
 <body>
+
+<!-- ══ GAME PRELOADER ════════════════════════════════════════ -->
+<div id="game-loader">
+  <div class="loader-content">
+    <div class="loader-mosquito">🦟</div>
+    <div class="loader-title">BLOODRUSH.IO</div>
+    <div class="loader-bar-bg">
+      <div class="loader-bar-fill"></div>
+    </div>
+    <div class="loader-status">Entering the swarm...</div>
+  </div>
+</div>
 
 <!-- ══ GAME CANVAS ══════════════════════════════════════════ -->
 <canvas id="game-canvas"></canvas>
@@ -127,7 +143,7 @@
 
     <!-- ── FOOTER ── -->
     <div class="mm-footer animate-in">
-      <span>v1.5.1b</span>
+      <span>v1.5.1</span>
       <span class="mm-dot">•</span>
       <button class="mm-footer-link" id="btn-about">About</button>
       <span class="mm-dot">•</span>
@@ -203,27 +219,6 @@
     </div>
   </div>
 
-  <!-- ─── USERNAME INPUT MODAL ────────────────────────────── -->
-  <div id="screen-name-input" class="screen">
-    <div class="screen-bg-anim"></div>
-    <div class="panel animate-in" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
-      <span style="font-size:3rem; margin-bottom:0.4rem;">🦟</span>
-      <h2>Enter Your Name</h2>
-      <p style="color:var(--color-text-muted); font-size:0.85rem; margin:0.4rem 0 1.2rem;">Choose your hunter name for the battle arena</p>
-      
-      <div style="width:100%; text-align:left;">
-        <label for="input-player-name-modal" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.06em; margin-bottom:4px; display:block;">Hunter Name</label>
-        <input type="text" id="input-player-name-modal" class="name-input" placeholder="e.g. ShadowBuzz" maxlength="15" autocomplete="off" spellcheck="false">
-      </div>
-
-      <button id="btn-submit-name" class="btn btn-primary" style="margin-top:1.2rem; width:100%;">
-        ⚔️ START GAME
-      </button>
-      <button id="btn-name-back" class="btn btn-ghost" style="margin-top:0.6rem; width:100%;">
-        ← Back
-      </button>
-    </div>
-  </div>
 
   <!-- ─── MODE SELECT ─────────────────────────────────────── -->
   <div id="screen-mode-select" class="screen">
@@ -375,10 +370,10 @@
 
         <!-- CTA -->
         <button id="btn-revive-ad" class="revive-cta-btn">
-          <span class="revive-ad-icon">📺</span>
+          <span class="revive-ad-icon" id="btn-revive-icon">📺</span>
           <span>
-            <strong>WATCH AD TO REVIVE</strong>
-            <small>Continue from where you left off</small>
+            <strong id="btn-revive-title">WATCH AD TO REVIVE</strong>
+            <small id="btn-revive-sub">Continue from where you left off</small>
           </span>
         </button>
 
@@ -615,7 +610,7 @@
 
         <div class="settings-row">
           <span class="settings-label">🎮 Version</span>
-          <span style="color:var(--color-text-muted); font-size:0.85rem;">1.0.0</span>
+          <span style="color:var(--color-text-muted); font-size:0.85rem;">v1.5.1</span>
         </div>
       </div>
       <button id="btn-reset-data" class="btn btn-danger">🗑️ Reset All Progress</button>

@@ -11,10 +11,11 @@ export const PowerupType = {
 };
 
 const TYPES_ARRAY = Object.keys(PowerupType);
+let _nextPowerupId = 1;
 
 export class Powerup {
   constructor(x, y, type) {
-    this.id = Math.random().toString(36).substr(2, 9);
+    this.id = _nextPowerupId++;
     this.x = x;
     this.y = y;
     this.type =
